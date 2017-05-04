@@ -19,4 +19,13 @@
     <!--Set to True to run Code Analysis-->
     <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net4.6|AnyCPU'">
+    <DefineConstants>DEBUG;TRACE;NET46</DefineConstants>
+    <Optimize>False</Optimize>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net4.6|AnyCPU'">
+    <DefineConstants>RELEASE;NET46</DefineConstants>
+  </PropertyGroup>
 </Project>

@@ -1,0 +1,49 @@
+﻿<Window x:Class="WpfApp1.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:mir="clr-namespace:DokanNetMirror;assembly=DokanNetMirror"
+        xmlns:local="clr-namespace:WpfApp1"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="400" Width="1024" Name="CurrentControl">
+    <Window.Resources>
+        <ResourceDictionary>
+            <local:MirrorContextColorConverter x:Key="MirrorColorConverter" />
+            <HierarchicalDataTemplate DataType="{x:Type mir:MirrorContext}" ItemsSource="{Binding Calls}">
+                <TextBlock Text="{Binding Path=DisplayName}">
+                    <TextBlock.Background>
+                        <MultiBinding Converter="{StaticResource MirrorColorConverter}">
+                            <Binding Path="HaveErrors" />
+                            <Binding Path="IsClosed" />
+                        </MultiBinding>
+                    </TextBlock.Background>
+                </TextBlock>
+            </HierarchicalDataTemplate>
+            <DataTemplate DataType="{x:Type mir:CallResult}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="{Binding Path=Method}" MinWidth="300" />
+                    <TextBlock Grid.Column="1" Text="{Binding Path=Result}" MinWidth="300" />
+                    <TextBlock Grid.Column="2" Text="{Binding Path=Exception.Message}" ToolTip="{Binding Path=Exception.StackTrace}" MinWidth="300" />
+
+                </Grid>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid>
+        <TreeView ItemsSource="{Binding ElementName=CurrentControl, Path=Contexts}" >
+            <!--<TreeView.ItemTemplate>
+                <ItemContainerTemplate>
+                    <ContentPresenter Content="{Binding}" />
+                </ItemContainerTemplate>
+            </TreeView.ItemTemplate>-->
+
+        </TreeView>
+    </Grid>
+</Window>
