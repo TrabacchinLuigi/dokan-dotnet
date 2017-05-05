@@ -958,7 +958,10 @@ namespace DokanNetMirror
                 call.Exception = ex;
                 throw;
             }
-            mirrorcontext.AddCall(call);
+            finally
+            {
+                mirrorcontext.AddCall(call);
+            }
         }
     }
 }
