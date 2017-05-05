@@ -22,6 +22,7 @@ namespace DokanNetMirror
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
+
     public class MirrorContext : Notifiable, IDisposable
     {
         private Object _lockObj = new Object();
@@ -159,6 +160,7 @@ namespace DokanNetMirror
 
     public class Mirror : IDokanOperations
     {
+        public event Action<Mirror, MirrorContext> ContextCreated;
         private readonly string path;
 
         private const FileAccess DataAccess = FileAccess.ReadData | FileAccess.WriteData | FileAccess.AppendData |
@@ -210,8 +212,6 @@ namespace DokanNetMirror
 
             return result;
         }
-
-        public event Action<Mirror, MirrorContext> ContextCreated;
 
         #region Implementation of IDokanOperations
 
@@ -449,7 +449,7 @@ namespace DokanNetMirror
 
                 return Trace(nameof(ReadFile), fileName, info, DokanResult.Success, "out " + innerBytesRead.ToString(),
                     offset.ToString(CultureInfo.InvariantCulture));
-            }, nameof(ReadFile), out bytesRead);
+            }, out bytesRead, nameof(ReadFile));
         }
 
         public NtStatus WriteFile(string fileName, byte[] buffer, out int bytesWritten, long offset, DokanFileInfo info)
@@ -478,7 +478,7 @@ namespace DokanNetMirror
                 }
                 return Trace(nameof(WriteFile), fileName, info, DokanResult.Success, "out " + innerBytesWritten.ToString(),
                     offset.ToString(CultureInfo.InvariantCulture));
-            }, nameof(WriteFile), out bytesWritten);
+            }, out bytesWritten, nameof(WriteFile));
         }
 
         public NtStatus FlushFileBuffers(string fileName, DokanFileInfo info)
@@ -520,7 +520,7 @@ namespace DokanNetMirror
                     Length = (finfo as FileInfo)?.Length ?? 0,
                 };
                 return Trace(nameof(GetFileInformation), fileName, info, DokanResult.Success);
-            }, nameof(GetFileInformation), out fileInfo);
+            }, out fileInfo, nameof(GetFileInformation));
         }
 
         public NtStatus FindFiles(string fileName, out IList<FileInformation> files, DokanFileInfo info)
@@ -533,7 +533,7 @@ namespace DokanNetMirror
                 innerfiles = FindFilesHelper(fileName, "*");
 
                 return Trace(nameof(FindFiles), fileName, info, DokanResult.Success);
-            }, nameof(FindFiles), out files);
+            }, out files, nameof(FindFiles));
         }
 
         public NtStatus SetFileAttributes(string fileName, FileAttributes attributes, DokanFileInfo info)
@@ -820,7 +820,7 @@ namespace DokanNetMirror
             security = null;
             return NtStatus.NotImplemented;
 #endif
-            }, nameof(GetFileSecurity), out security);
+            }, out security, nameof(GetFileSecurity));
         }
 
         public NtStatus SetFileSecurity(string fileName, FileSystemSecurity security, AccessControlSections sections,
@@ -873,7 +873,7 @@ namespace DokanNetMirror
                 innerStreamSize = 0;
                 return Trace(nameof(FindStreams), fileName, info, DokanResult.NotImplemented, enumContext.ToString(),
                     "out " + innerStreamName, "out " + innerStreamSize.ToString());
-            }, nameof(FindStreams), out streamName, out streamSize);
+            }, out streamName, out streamSize, nameof(FindStreams));
         }
 
         public NtStatus FindStreams(string fileName, out IList<FileInformation> streams, DokanFileInfo info)
@@ -883,7 +883,7 @@ namespace DokanNetMirror
             {
                 innerStreams = new FileInformation[0];
                 return Trace(nameof(FindStreams), fileName, info, DokanResult.NotImplemented);
-            }, nameof(FindStreams), out streams);
+            }, out streams, nameof(FindStreams));
         }
 
 
@@ -897,7 +897,7 @@ namespace DokanNetMirror
                 innerFiles = FindFilesHelper(fileName, searchPattern);
 
                 return Trace(nameof(FindFilesWithPattern), fileName, info, DokanResult.Success);
-            }, nameof(FindFilesWithPattern), out files);
+            }, out files, nameof(FindFilesWithPattern));
         }
 
         #endregion Implementation of IDokanOperations
@@ -924,7 +924,7 @@ namespace DokanNetMirror
         delegate NtStatus DelegateResult<T>(out T out1);
         delegate NtStatus DelegateResult<T, S>(out T out1, out S out2);
 
-        private NtStatus TryAndLog<T, S>(MirrorContext mirrorcontext, DelegateResult<T, S> func, string method, out T out1, out S out2)
+        private NtStatus TryAndLog<T, S>(MirrorContext mirrorcontext, DelegateResult<T, S> func, out T out1, out S out2, string method = null)
         {
             var call = new CallResult() { Method = method };
             try
@@ -944,25 +944,25 @@ namespace DokanNetMirror
             }
         }
 
-        private NtStatus TryAndLog<T>(MirrorContext mirrorcontext, DelegateResult<T> func, string method, out T something)
+        private NtStatus TryAndLog<T>(MirrorContext mirrorcontext, DelegateResult<T> func, out T something, string method = null)
         {
             return TryAndLog<T, int>(mirrorcontext, (out T innerOut1, out int innerDiscard) =>
             {
                 innerDiscard = 0;
                 return func(out innerOut1);
-            }, method, out something, out int discard);
+            }, out something, out int discard, method);
         }
 
-        private NtStatus TryAndLog(MirrorContext mirrorcontext, Func<NtStatus> func, string method)
+        private NtStatus TryAndLog(MirrorContext mirrorcontext, Func<NtStatus> func, string method = null)
         {
             return TryAndLog<int>(mirrorcontext, (out int innerDiscard) =>
             {
                 innerDiscard = 0;
                 return func();
-            }, method, out int discard);
+            }, out int discard, method);
         }
 
-        private void TryAndLog(MirrorContext mirrorcontext, Action action, string method)
+        private void TryAndLog(MirrorContext mirrorcontext, Action action, string method = null)
         {
             TryAndLog(mirrorcontext, () =>
             {
