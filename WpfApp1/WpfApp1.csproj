@@ -100,6 +100,10 @@
       <Project>{cd78387d-1136-4143-8b71-1dbc2dd440df}</Project>
       <Name>DokanNet</Name>
     </ProjectReference>
+    <ProjectReference Include="..\IOExtensions\IOExtensions.csproj">
+      <Project>{632a226e-78a7-4ea8-b01b-54ef66eba333}</Project>
+      <Name>IOExtensions</Name>
+    </ProjectReference>
     <ProjectReference Include="..\sample\DokanNetMirror\DokanNetMirror.csproj">
       <Project>{e5f9ba3d-a37a-479e-8985-30dd661f4e72}</Project>
       <Name>DokanNetMirror</Name>

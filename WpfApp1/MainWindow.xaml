@@ -26,11 +26,14 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="{Binding Path=Method}" MinWidth="300" />
-                    <TextBlock Grid.Column="1" Text="{Binding Path=Result}" MinWidth="300" />
-                    <TextBlock Grid.Column="2" Text="{Binding Path=Exception.Message}" ToolTip="{Binding Path=Exception.StackTrace}" MinWidth="300" />
+                    <TextBlock Grid.Column="0" Text="{Binding Path=Times, StringFormat='\{0:d\}x'}" MinWidth="50"  />
+                    <TextBlock Grid.Column="1" Text="{Binding Path=Method}" MinWidth="250" />
+                    <TextBlock Grid.Column="2" Text="{Binding Path=Result}" MinWidth="250" />
+                    <TextBlock Grid.Column="3" Text="{Binding Path=Exception.Message}" ToolTip="{Binding Path=Exception.StackTrace}" MinWidth="250" />
+
 
                 </Grid>
             </DataTemplate>

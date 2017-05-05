@@ -14,9 +14,29 @@ using SilentWave.IOExtensons;
 
 namespace DokanNetMirror
 {
-    public class MirrorContext : INotifyPropertyChanged
+    public class Notifiable : INotifyPropertyChanged
     {
-        public string DisplayName { get; set; }
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void RaisePropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+    public class MirrorContext : Notifiable
+    {
+        private Object _lockObj = new Object();
+        private String _DispayName;
+        public String DisplayName
+        {
+            get => _DispayName;
+            set
+            {
+                if (String.Equals(_DispayName, value)) return;
+                _DispayName = value;
+                RaisePropertyChanged(nameof(DisplayName));
+            }
+        }
+
         private Boolean _HaveErrors;
         public Boolean HaveErrors
         {
@@ -42,37 +62,62 @@ namespace DokanNetMirror
             }
         }
 
-        public FileStream RealContext { get; set; }
+        public FileStream FileStream { get; set; }
         private List<CallResult> _Calls = new List<CallResult>();
 
-        public event PropertyChangedEventHandler PropertyChanged;
+
         public event Action<MirrorContext> Closed;
 
         public CallResult[] Calls => _Calls.ToArray();
-        public void AddCall(CallResult r)
+        public void AddCall(CallResult call)
         {
-            _Calls.Add(r);
-            RaisePropertyChanged(nameof(Calls));
-
-            if (r.Exception != null) HaveErrors = true;
-
-            if (r.Method == nameof(Mirror.CloseFile))
+            try
             {
-                IsClosed = true;
-            };
-        }
+                lock (_lockObj)
+                {
+                    var lastCall = _Calls.LastOrDefault();
 
-        private void RaisePropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+                    if (lastCall != null && lastCall.Method == call.Method && lastCall.Result == call.Result && lastCall.Exception?.GetType() == call.Exception?.GetType())
+                    {
+                        lastCall.Times++;
+                    }
+                    else
+                    {
+                        _Calls.Add(call);
+                        RaisePropertyChanged(nameof(Calls));
+                        if (call.Exception != null) HaveErrors = true;
+
+                        if (call.Method == nameof(Mirror.CloseFile))
+                        {
+                            IsClosed = true;
+                        };
+                    }
+                }
+            }
+            catch
+            {
+
+            }
         }
     }
 
-    public class CallResult
+    public class CallResult : Notifiable
     {
         public string Method { get; set; }
-        public NtStatus Result { get; set; }
+        public NtStatus? Result { get; set; }
         public Exception Exception { get; set; }
+
+        private UInt32 _Times = 1;
+        public UInt32 Times
+        {
+            get => _Times;
+            set
+            {
+                if (Times == value) return;
+                _Times = value;
+                RaisePropertyChanged(nameof(Times));
+            }
+        }
     }
 
     public class Mirror : IDokanOperations
@@ -257,7 +302,7 @@ namespace DokanNetMirror
 
                     try
                     {
-                        mirrorcontext.RealContext = new FileStream(filePath, mode, readAccess ? System.IO.FileAccess.Read : System.IO.FileAccess.ReadWrite, share, 4096, options);
+                        mirrorcontext.FileStream = new FileStream(filePath, mode, readAccess ? System.IO.FileAccess.Read : System.IO.FileAccess.ReadWrite, share, 4096, options);
                         if (pathExists && (mode == FileMode.OpenOrCreate
                             || mode == FileMode.Create))
                             result = DokanResult.AlreadyExists;
@@ -268,10 +313,10 @@ namespace DokanNetMirror
                     }
                     catch (UnauthorizedAccessException) // don't have access rights
                     {
-                        if (mirrorcontext.RealContext != null)
+                        if (mirrorcontext.FileStream != null)
                         {
-                            mirrorcontext.RealContext.Dispose();
-                            mirrorcontext.RealContext = null;
+                            mirrorcontext.FileStream.Dispose();
+                            mirrorcontext.FileStream = null;
                         }
                         return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
                             DokanResult.AccessDenied);
@@ -307,7 +352,7 @@ namespace DokanNetMirror
             var mirrorcontext = info.Context as MirrorContext;
             TryAndLog(mirrorcontext, () =>
             {
-                mirrorcontext.RealContext?.Dispose();
+                mirrorcontext.FileStream?.Dispose();
                 //mirrorcontext.RealContext = null;
 
                 if (info.DeleteOnClose)
@@ -333,7 +378,7 @@ namespace DokanNetMirror
             var mirrorcontext = info.Context as MirrorContext;
             TryAndLog(mirrorcontext, () =>
             {
-                mirrorcontext.RealContext?.Dispose();
+                mirrorcontext.FileStream?.Dispose();
                 //mirrorcontext.RealContext = null;
 
                 Trace(nameof(CloseFile), fileName, info, DokanResult.Success);
@@ -347,7 +392,7 @@ namespace DokanNetMirror
 
             return TryAndLog(mirrorcontext, (out int innerBytesRead) =>
             {
-                if (mirrorcontext.RealContext == null) // memory mapped read
+                if (mirrorcontext.FileStream == null) // memory mapped read
                 {
                     using (var stream = new FileStream(GetPath(fileName), FileMode.Open, System.IO.FileAccess.Read))
                     {
@@ -357,7 +402,7 @@ namespace DokanNetMirror
                 }
                 else // normal read
                 {
-                    var stream = mirrorcontext.RealContext;
+                    var stream = mirrorcontext.FileStream;
                     lock (stream) //Protect from overlapped read
                     {
                         stream.Position = offset;
@@ -375,7 +420,7 @@ namespace DokanNetMirror
             var mirrorcontext = info.Context as MirrorContext;
             return TryAndLog(mirrorcontext, (out int innerBytesWritten) =>
             {
-                if (mirrorcontext.RealContext == null)
+                if (mirrorcontext.FileStream == null)
                 {
                     using (var stream = new FileStream(GetPath(fileName), FileMode.Open, System.IO.FileAccess.Write))
                     {
@@ -386,7 +431,7 @@ namespace DokanNetMirror
                 }
                 else
                 {
-                    var stream = mirrorcontext.RealContext;
+                    var stream = mirrorcontext.FileStream;
                     lock (stream) //Protect from overlapped write
                     {
                         stream.Position = offset;
@@ -406,7 +451,7 @@ namespace DokanNetMirror
             {
                 try
                 {
-                    mirrorcontext.RealContext.Flush();
+                    mirrorcontext.FileStream.Flush();
                     return Trace(nameof(FlushFileBuffers), fileName, info, DokanResult.Success);
                 }
                 catch (IOException)
@@ -487,9 +532,9 @@ namespace DokanNetMirror
             {
                 try
                 {
-                    if (mirrorcontext.RealContext != null)
+                    if (mirrorcontext.FileStream != null)
                     {
-                        mirrorcontext.RealContext.SafeFileHandle.SetFileTime(creationTime, lastAccessTime, lastWriteTime);
+                        mirrorcontext.FileStream.SafeFileHandle.SetFileTime(creationTime, lastAccessTime, lastWriteTime);
                     }
                     else
                     {
@@ -561,7 +606,7 @@ namespace DokanNetMirror
                 var oldpath = GetPath(oldName);
                 var newpath = GetPath(newName);
 
-                mirrorContext.RealContext?.Dispose();
+                mirrorContext.FileStream?.Dispose();
                 //mirrorContext.RealContext = null;
 
                 var exist = info.IsDirectory ? Directory.Exists(newpath) : File.Exists(newpath);
@@ -610,7 +655,7 @@ namespace DokanNetMirror
             {
                 try
                 {
-                    mirrorContext.RealContext.SetLength(length);
+                    mirrorContext.FileStream.SetLength(length);
                     return Trace(nameof(SetEndOfFile), fileName, info, DokanResult.Success,
                         length.ToString(CultureInfo.InvariantCulture));
                 }
@@ -629,7 +674,7 @@ namespace DokanNetMirror
             {
                 try
                 {
-                    mirrorContext.RealContext.SetLength(length);
+                    mirrorContext.FileStream.SetLength(length);
                     return Trace(nameof(SetAllocationSize), fileName, info, DokanResult.Success,
                         length.ToString(CultureInfo.InvariantCulture));
                 }
@@ -649,7 +694,7 @@ namespace DokanNetMirror
 #if !NETCOREAPP1_0
                 try
                 {
-                    mirrorContext.RealContext.Lock(offset, length);
+                    mirrorContext.FileStream.Lock(offset, length);
                     return Trace(nameof(LockFile), fileName, info, DokanResult.Success,
                         offset.ToString(CultureInfo.InvariantCulture), length.ToString(CultureInfo.InvariantCulture));
                 }
@@ -673,7 +718,7 @@ namespace DokanNetMirror
 #if !NETCOREAPP1_0
                 try
                 {
-                    mirrorContext.RealContext.Unlock(offset, length);
+                    mirrorContext.FileStream.Unlock(offset, length);
                     return Trace(nameof(UnlockFile), fileName, info, DokanResult.Success,
                         offset.ToString(CultureInfo.InvariantCulture), length.ToString(CultureInfo.InvariantCulture));
                 }
@@ -847,8 +892,9 @@ namespace DokanNetMirror
             var call = new CallResult() { Method = method };
             try
             {
-                call.Result = func(out out1, out out2);
-                return call.Result;
+                var result = func(out out1, out out2);
+                call.Result = result;
+                return result;
             }
             catch (Exception ex)
             {
@@ -866,8 +912,9 @@ namespace DokanNetMirror
             var call = new CallResult() { Method = method };
             try
             {
-                call.Result = func(out something);
-                return call.Result;
+                var result = func(out something);
+                call.Result = result;
+                return result;
             }
             catch (Exception ex)
             {
@@ -885,8 +932,9 @@ namespace DokanNetMirror
             var call = new CallResult() { Method = method };
             try
             {
-                call.Result = func();
-                return call.Result;
+                var result = func();
+                call.Result = result;
+                return result;
             }
             catch (Exception ex)
             {

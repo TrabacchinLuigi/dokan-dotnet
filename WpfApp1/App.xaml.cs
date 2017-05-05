@@ -45,7 +45,7 @@ namespace WpfApp1
                             Contexts.Add(y);
                             await Task.Delay(TimeSpan.FromSeconds(10));
                            
-                            if (!y.HaveErrors && y.RealContext == null) Contexts.Remove(y);
+                            if (!y.HaveErrors && y.FileStream == null) Contexts.Remove(y);
                         });
                     };
                     mirror.Mount("n:\\");
