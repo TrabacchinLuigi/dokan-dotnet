@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\DokanNet\DokanNet.csproj" />
+    <ProjectReference Include="..\..\IOExtensions\IOExtensions.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net4.0'">
@@ -20,12 +21,12 @@
     <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net4.6|AnyCPU'">
-    <DefineConstants>DEBUG;TRACE;NET46</DefineConstants>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
     <Optimize>False</Optimize>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net4.6|AnyCPU'">
-    <DefineConstants>RELEASE;NET46</DefineConstants>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DefineConstants>RELEASE</DefineConstants>
   </PropertyGroup>
 </Project>

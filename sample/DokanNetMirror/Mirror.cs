@@ -10,6 +10,7 @@ using DokanNet;
 using DokanNet.Logging;
 using static DokanNet.FormatProviders;
 using FileAccess = DokanNet.FileAccess;
+using SilentWave.IOExtensons;
 
 namespace DokanNetMirror
 {
@@ -267,7 +268,7 @@ namespace DokanNetMirror
                     }
                     catch (UnauthorizedAccessException) // don't have access rights
                     {
-                        if(mirrorcontext.RealContext != null)
+                        if (mirrorcontext.RealContext != null)
                         {
                             mirrorcontext.RealContext.Dispose();
                             mirrorcontext.RealContext = null;
@@ -486,16 +487,22 @@ namespace DokanNetMirror
             {
                 try
                 {
-                    var filePath = GetPath(fileName);
-                    if (creationTime.HasValue)
-                        File.SetCreationTime(filePath, creationTime.Value);
+                    if (mirrorcontext.RealContext != null)
+                    {
+                        mirrorcontext.RealContext.SafeFileHandle.SetFileTime(creationTime, lastAccessTime, lastWriteTime);
+                    }
+                    else
+                    {
+                        var filePath = GetPath(fileName);
+                        if (creationTime.HasValue)
+                            File.SetCreationTime(filePath, creationTime.Value);
 
-                    if (lastAccessTime.HasValue)
-                        File.SetLastAccessTime(filePath, lastAccessTime.Value);
+                        if (lastAccessTime.HasValue)
+                            File.SetLastAccessTime(filePath, lastAccessTime.Value);
 
-                    if (lastWriteTime.HasValue)
-                        File.SetLastWriteTime(filePath, lastWriteTime.Value);
-
+                        if (lastWriteTime.HasValue)
+                            File.SetLastWriteTime(filePath, lastWriteTime.Value);
+                    }
                     return Trace(nameof(SetFileTime), fileName, info, DokanResult.Success, creationTime, lastAccessTime,
                         lastWriteTime);
                 }
