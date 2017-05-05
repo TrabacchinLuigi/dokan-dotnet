@@ -22,7 +22,7 @@ namespace DokanNetMirror
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
-    public class MirrorContext : Notifiable
+    public class MirrorContext : Notifiable, IDisposable
     {
         private Object _lockObj = new Object();
         private String _DispayName;
@@ -99,6 +99,43 @@ namespace DokanNetMirror
 
             }
         }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects).
+                    _Calls.Clear();
+                    _Calls = null;
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                disposedValue = true;
+            }
+        }
+
+        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+        // ~MirrorContext() {
+        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        //   Dispose(false);
+        // }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            // TODO: uncomment the following line if the finalizer is overridden above.
+            // GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 
     public class CallResult : Notifiable
@@ -882,8 +919,8 @@ namespace DokanNetMirror
 
             return files;
         }
-        delegate NtStatus DelegateResult();
 
+        delegate NtStatus DelegateResult();
         delegate NtStatus DelegateResult<T>(out T out1);
         delegate NtStatus DelegateResult<T, S>(out T out1, out S out2);
 
@@ -909,59 +946,29 @@ namespace DokanNetMirror
 
         private NtStatus TryAndLog<T>(MirrorContext mirrorcontext, DelegateResult<T> func, string method, out T something)
         {
-            var call = new CallResult() { Method = method };
-            try
+            return TryAndLog<T, int>(mirrorcontext, (out T innerOut1, out int innerDiscard) =>
             {
-                var result = func(out something);
-                call.Result = result;
-                return result;
-            }
-            catch (Exception ex)
-            {
-                call.Exception = ex;
-                throw;
-            }
-            finally
-            {
-                mirrorcontext.AddCall(call);
-            }
+                innerDiscard = 0;
+                return func(out innerOut1);
+            }, method, out something, out int discard);
         }
 
         private NtStatus TryAndLog(MirrorContext mirrorcontext, Func<NtStatus> func, string method)
         {
-            var call = new CallResult() { Method = method };
-            try
+            return TryAndLog<int>(mirrorcontext, (out int innerDiscard) =>
             {
-                var result = func();
-                call.Result = result;
-                return result;
-            }
-            catch (Exception ex)
-            {
-                call.Exception = ex;
-                throw;
-            }
-            finally
-            {
-                mirrorcontext.AddCall(call);
-            }
+                innerDiscard = 0;
+                return func();
+            }, method, out int discard);
         }
+
         private void TryAndLog(MirrorContext mirrorcontext, Action action, string method)
         {
-            var call = new CallResult() { Method = method };
-            try
+            TryAndLog(mirrorcontext, () =>
             {
                 action();
-            }
-            catch (Exception ex)
-            {
-                call.Exception = ex;
-                throw;
-            }
-            finally
-            {
-                mirrorcontext.AddCall(call);
-            }
+                return 0; // discard it
+            }, method);
         }
     }
 }

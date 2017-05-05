@@ -22,6 +22,7 @@ namespace WpfApp1
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
+            Contexts.CollectionChanged += Contexts_CollectionChanged;
             System.Threading.Tasks.Task.Factory.StartNew(() =>
             {
                 try
@@ -44,7 +45,7 @@ namespace WpfApp1
                         {
                             Contexts.Add(y);
                             await Task.Delay(TimeSpan.FromSeconds(10));
-                           
+
                             if (!y.HaveErrors && y.FileStream == null) Contexts.Remove(y);
                         });
                     };
@@ -57,6 +58,13 @@ namespace WpfApp1
 
                 }
             });
+        }
+
+        private void Contexts_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if(e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove)
+                foreach (var mc in e.OldItems.OfType<MirrorContext>())
+                    mc.Dispose();
         }
     }
 }
