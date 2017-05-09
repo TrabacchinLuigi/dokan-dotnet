@@ -426,10 +426,9 @@ namespace DokanNetMirror
         public NtStatus ReadFile(string fileName, byte[] buffer, out int bytesRead, long offset, DokanFileInfo info)
         {
             var mirrorcontext = info.Context as MirrorContext;
-
             return TryAndLog(mirrorcontext, (out int innerBytesRead) =>
             {
-                if (mirrorcontext.FileStream == null) // memory mapped read
+                if (!mirrorcontext.FileStream.CanRead) // memory mapped read
                 {
                     using (var stream = new FileStream(GetPath(fileName), FileMode.Open, System.IO.FileAccess.Read))
                     {
@@ -885,8 +884,6 @@ namespace DokanNetMirror
                 return Trace(nameof(FindStreams), fileName, info, DokanResult.NotImplemented);
             }, out streams, nameof(FindStreams));
         }
-
-
 
         public NtStatus FindFilesWithPattern(string fileName, string searchPattern, out IList<FileInformation> files,
             DokanFileInfo info)

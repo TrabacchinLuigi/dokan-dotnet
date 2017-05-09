@@ -16,41 +16,16 @@ namespace WpfApp1
     /// </summary>
     public partial class App : Application
     {
-        public ObservableCollection<MirrorContext> Contexts { get; } = new ObservableCollection<MirrorContext>();
-
         public static new App Current => Application.Current as App;
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
-            Contexts.CollectionChanged += Contexts_CollectionChanged;
+            var mirror = new Mirror("C:");
             System.Threading.Tasks.Task.Factory.StartNew(() =>
             {
                 try
                 {
-                    var mirror = new Mirror("C:");
-                    mirror.ContextCreated += (x, y) =>
-                    {
-                        y.Closed += z =>
-                        {
-                            Dispatcher.InvokeAsync(async () =>
-                            {
-                                if (!z.HaveErrors)
-                                {
-                                    await Task.Delay(TimeSpan.FromSeconds(5));
-                                    Contexts.Remove(z);
-                                }
-                            });
-                        };
-                        Dispatcher.InvokeAsync(async () =>
-                        {
-                            Contexts.Add(y);
-                            await Task.Delay(TimeSpan.FromSeconds(10));
-
-                            if (!y.HaveErrors && y.FileStream == null) Contexts.Remove(y);
-                        });
-                    };
                     mirror.Mount("n:\\");
-
                     Console.WriteLine("Success");
                 }
                 catch (DokanException ex)
@@ -58,13 +33,8 @@ namespace WpfApp1
 
                 }
             });
-        }
-
-        private void Contexts_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            if(e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Remove)
-                foreach (var mc in e.OldItems.OfType<MirrorContext>())
-                    mc.Dispose();
+            MainWindow = new FileSystemWatcherWindow(mirror);
+            MainWindow.Show();
         }
     }
 }
