@@ -17,7 +17,7 @@ namespace DokanNetMirror
     public class Notifiable : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
-        protected void RaisePropertyChanged(string propertyName)
+        protected void NotifyPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
@@ -25,18 +25,15 @@ namespace DokanNetMirror
 
     public class MirrorContext : Notifiable, IDisposable
     {
-        private Object _lockObj = new Object();
-        private String _DispayName;
-        public String DisplayName
-        {
-            get => _DispayName;
-            set
-            {
-                if (String.Equals(_DispayName, value)) return;
-                _DispayName = value;
-                RaisePropertyChanged(nameof(DisplayName));
-            }
-        }
+        public event Action<MirrorContext> Closed;
+
+        public String DisplayName => $"{FileName} | {IdentityName} | {ProcessId} | {Access} | {Share} | {Mode}";
+        public String FileName { get; private set; }
+        public Int32 ProcessId { get; private set; }
+
+        public FileAccess Access { get; private set; }
+        public FileShare Share { get; private set; }
+        public FileMode Mode { get; private set; }
 
         private Boolean _HaveErrors;
         public Boolean HaveErrors
@@ -46,7 +43,7 @@ namespace DokanNetMirror
             {
                 if (_HaveErrors == value) return;
                 _HaveErrors = value;
-                RaisePropertyChanged(nameof(HaveErrors));
+                NotifyPropertyChanged(nameof(HaveErrors));
             }
         }
 
@@ -58,23 +55,24 @@ namespace DokanNetMirror
             {
                 if (_IsClosed == value) return;
                 _IsClosed = value;
-                RaisePropertyChanged(nameof(IsClosed));
+                NotifyPropertyChanged(nameof(IsClosed));
                 if (value) Closed?.Invoke(this);
             }
         }
 
         public FileStream FileStream { get; set; }
-        private List<CallResult> _Calls = new List<CallResult>();
+        private readonly List<CallResult> _Calls = new List<CallResult>();
 
+        public String IdentityName { get; private set; }
 
-        public event Action<MirrorContext> Closed;
 
         public CallResult[] Calls => _Calls.ToArray();
         public void AddCall(CallResult call)
         {
+            if (disposedValue) return;
             try
             {
-                lock (_lockObj)
+                lock (_Calls)
                 {
                     var lastCall = _Calls.LastOrDefault();
 
@@ -85,8 +83,8 @@ namespace DokanNetMirror
                     else
                     {
                         _Calls.Add(call);
-                        RaisePropertyChanged(nameof(Calls));
-                        if (call.Exception != null) HaveErrors = true;
+                        NotifyPropertyChanged(nameof(Calls));
+                        if (call.Exception != null || (call.Result != NtStatus.Success)) HaveErrors = true;
 
                         if (call.Method == nameof(Mirror.CloseFile))
                         {
@@ -101,6 +99,17 @@ namespace DokanNetMirror
             }
         }
 
+        public MirrorContext(System.Security.Principal.WindowsIdentity identity, String fileName, Int32 processId, FileAccess access, FileShare share, FileMode mode)
+        {
+            IdentityName = identity?.Name;
+            FileName = fileName ?? throw new ArgumentNullException(nameof(fileName));
+            ProcessId = processId;
+
+            Mode = mode;
+            Access = access;
+            Share = share;
+        }
+
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
 
@@ -108,17 +117,22 @@ namespace DokanNetMirror
         {
             if (!disposedValue)
             {
-                if (disposing)
+                lock (Calls)
                 {
-                    // TODO: dispose managed state (managed objects).
-                    _Calls.Clear();
-                    _Calls = null;
+                    if (disposing)
+                    {
+
+                        // TODO: dispose managed state (managed objects).
+                        _Calls.Clear();
+                        Closed = null;
+                        FileStream = null;
+                    }
+
+                    // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                    // TODO: set large fields to null.
+
+                    disposedValue = true;
                 }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                // TODO: set large fields to null.
-
-                disposedValue = true;
             }
         }
 
@@ -153,7 +167,7 @@ namespace DokanNetMirror
             {
                 if (Times == value) return;
                 _Times = value;
-                RaisePropertyChanged(nameof(Times));
+                NotifyPropertyChanged(nameof(Times));
             }
         }
     }
@@ -218,9 +232,10 @@ namespace DokanNetMirror
         public NtStatus CreateFile(string fileName, FileAccess access, FileShare share, FileMode mode,
             FileOptions options, FileAttributes attributes, DokanFileInfo info)
         {
+            if (fileName.EndsWith(".slog", StringComparison.OrdinalIgnoreCase)) return NtStatus.AccessDenied;
             var result = NtStatus.Success;
             var filePath = GetPath(fileName);
-            var mirrorcontext = new MirrorContext() { DisplayName = fileName };
+            var mirrorcontext = new MirrorContext(info.GetRequestor(), fileName, info.ProcessId, access, share, mode);
             ContextCreated?.Invoke(this, mirrorcontext);
 
             info.Context = mirrorcontext;
@@ -337,42 +352,45 @@ namespace DokanNetMirror
                             break;
                     }
 
-                    try
+                    if (access.HasFlag(FileAccess.ReadData) || access.HasFlag(FileAccess.WriteData) || access.HasFlag(FileAccess.AppendData))
                     {
-                        mirrorcontext.FileStream = new FileStream(filePath, mode, readAccess ? System.IO.FileAccess.Read : System.IO.FileAccess.ReadWrite, share, 4096, options);
-                        if (pathExists && (mode == FileMode.OpenOrCreate
-                            || mode == FileMode.Create))
-                            result = DokanResult.AlreadyExists;
+                        try
+                        {
+                            mirrorcontext.FileStream = new FileStream(filePath, mode, readAccess ? System.IO.FileAccess.Read : System.IO.FileAccess.ReadWrite, share, 4096, options);
+                            if (pathExists && (mode == FileMode.OpenOrCreate
+                                || mode == FileMode.Create))
+                                result = DokanResult.AlreadyExists;
 
-                        if (mode == FileMode.CreateNew || mode == FileMode.Create) //Files are always created as Archive
-                            attributes |= FileAttributes.Archive;
-                        File.SetAttributes(filePath, attributes);
-                    }
-                    catch (UnauthorizedAccessException) // don't have access rights
-                    {
-                        if (mirrorcontext.FileStream != null)
-                        {
-                            mirrorcontext.FileStream.Dispose();
-                            mirrorcontext.FileStream = null;
+                            if (mode == FileMode.CreateNew || mode == FileMode.Create) //Files are always created as Archive
+                                attributes |= FileAttributes.Archive;
+                            File.SetAttributes(filePath, attributes);
                         }
-                        return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
-                            DokanResult.AccessDenied);
-                    }
-                    catch (DirectoryNotFoundException)
-                    {
-                        return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
-                            DokanResult.PathNotFound);
-                    }
-                    catch (Exception ex)
-                    {
-                        var hr = (uint)Marshal.GetHRForException(ex);
-                        switch (hr)
+                        catch (UnauthorizedAccessException) // don't have access rights
                         {
-                            case 0x80070020: //Sharing violation
-                                return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
-                                    DokanResult.SharingViolation);
-                            default:
-                                throw;
+                            if (mirrorcontext.FileStream != null)
+                            {
+                                mirrorcontext.FileStream.Dispose();
+                                //mirrorcontext.FileStream = null;
+                            }
+                            return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
+                                DokanResult.AccessDenied);
+                        }
+                        catch (DirectoryNotFoundException)
+                        {
+                            return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
+                                DokanResult.PathNotFound);
+                        }
+                        catch (Exception ex)
+                        {
+                            var hr = (uint)Marshal.GetHRForException(ex);
+                            switch (hr)
+                            {
+                                case 0x80070020: //Sharing violation
+                                    return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
+                                        DokanResult.SharingViolation);
+                                default:
+                                    throw;
+                            }
                         }
                     }
                 }
@@ -428,7 +446,8 @@ namespace DokanNetMirror
             var mirrorcontext = info.Context as MirrorContext;
             return TryAndLog(mirrorcontext, (out int innerBytesRead) =>
             {
-                if (!mirrorcontext.FileStream.CanRead) // memory mapped read
+                var canRead = mirrorcontext?.FileStream?.CanRead ?? false;
+                if (!canRead) // memory mapped read
                 {
                     using (var stream = new FileStream(GetPath(fileName), FileMode.Open, System.IO.FileAccess.Read))
                     {

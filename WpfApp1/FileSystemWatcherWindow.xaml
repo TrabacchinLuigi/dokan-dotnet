@@ -6,7 +6,7 @@
         xmlns:mir="clr-namespace:DokanNetMirror;assembly=DokanNetMirror"
         xmlns:local="clr-namespace:WpfApp1"
         mc:Ignorable="d"
-        Title="MainWindow" Height="400" Width="1024" Name="CurrentControl">
+        Title="MainWindow" Height="400" Width="1024" Name="CurrentControl" Closed="CurrentControl_Closed">
     <Window.Resources>
         <ResourceDictionary>
             <local:MirrorContextColorConverter x:Key="MirrorColorConverter" />
@@ -40,7 +40,15 @@
         </ResourceDictionary>
     </Window.Resources>
     <Grid>
-        <TreeView ItemsSource="{Binding ElementName=CurrentControl, Path=Contexts}" >
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal">
+            <Slider Width="250" Value="{Binding ElementName=CurrentControl, Path=ViewModel.Delay}" Minimum="5"  Maximum="150" TickPlacement="BottomRight" TickFrequency="5" IsSnapToTickEnabled="True" />
+            <TextBlock VerticalAlignment="Center" Text="{Binding ElementName=CurrentControl, Path=ViewModel.Delay, StringFormat='\{0\}s', Mode=OneWay, FallbackValue='\{0\}s'}" />
+        </StackPanel>
+        <TreeView Grid.Row="1" ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.Contexts}" >
             <!--<TreeView.ItemTemplate>
                 <ItemContainerTemplate>
                     <ContentPresenter Content="{Binding}" />
