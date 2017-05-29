@@ -3,38 +3,64 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:mir="clr-namespace:DokanNetMirror;assembly=DokanNetMirror"
         xmlns:local="clr-namespace:WpfApp1"
         mc:Ignorable="d"
         Title="MainWindow" Height="400" Width="1024" Name="CurrentControl" Closed="CurrentControl_Closed">
     <Window.Resources>
         <ResourceDictionary>
-            <local:MirrorContextColorConverter x:Key="MirrorColorConverter" />
-            <HierarchicalDataTemplate DataType="{x:Type mir:MirrorContext}" ItemsSource="{Binding Calls}">
-                <TextBlock Text="{Binding Path=DisplayName}">
-                    <TextBlock.Background>
-                        <MultiBinding Converter="{StaticResource MirrorColorConverter}">
-                            <Binding Path="HaveErrors" />
-                            <Binding Path="IsClosed" />
-                        </MultiBinding>
-                    </TextBlock.Background>
-                </TextBlock>
-            </HierarchicalDataTemplate>
-            <DataTemplate DataType="{x:Type mir:CallResult}">
-                <Grid>
+            <HierarchicalDataTemplate DataType="{x:Type local:MirrorContextViewModel}" ItemsSource="{Binding Calls}">
+                <Grid Background="{Binding BackGroundColor}">
                     <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" Text="{Binding Path=Times, StringFormat='\{0:d\}x'}" MinWidth="50"  />
-                    <TextBlock Grid.Column="1" Text="{Binding Path=Method}" MinWidth="250" />
-                    <TextBlock Grid.Column="2" Text="{Binding Path=Result}" MinWidth="250" />
-                    <TextBlock Grid.Column="3" Text="{Binding Path=Exception.Message}" ToolTip="{Binding Path=Exception.StackTrace}" MinWidth="250" />
+                    <Grid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Command="" Header="Remove" />
+                        </ContextMenu>
+                    </Grid.ContextMenu>
 
+                    <TextBlock Grid.Column="0" Text="{Binding Path=ProcessId}" Width="50"  />
+                    <TextBlock Grid.Column="1" Text="{Binding Path=IdentityName}" Width="200" />
+                    <TextBlock Grid.Column="2" Text="{Binding Path=Start, StringFormat={}{0:HH:mm:ss:ffff}}" Width="100" />
+                    <TextBlock Grid.Column="3" Text="{Binding Path=FileName}" Width="250" />
+                    <CheckBox  Grid.Column="4" ToolTip="Existed" IsChecked="{Binding Path=FileExisted, Mode=OneWay}" IsEnabled="False" ToolTipService.ShowOnDisabled="True" />
+                    <CheckBox  Grid.Column="5" ToolTip="Read" IsChecked="{Binding Path=BeenRead, Mode=OneWay}" IsEnabled="False" ToolTipService.ShowOnDisabled="True" />
+                    <CheckBox  Grid.Column="6" ToolTip="Written" IsChecked="{Binding Path=BeenWritten, Mode=OneWay}" IsEnabled="False" ToolTipService.ShowOnDisabled="True" />
+                    <TextBlock Grid.Column="7" Text="{Binding Path=Access}" Width="650" />
+                    <TextBlock Grid.Column="8" Text="{Binding Path=Share}" Width="250" />
+                    <TextBlock Grid.Column="9" Text="{Binding Path=Mode}" Width="100" />
+                    <TextBlock Grid.Column="10" Text="{Binding Path=End, StringFormat={}{0:HH:mm:ss:ffff}}" Width="100" />
+                </Grid>
+            </HierarchicalDataTemplate>
 
+            <DataTemplate DataType="{x:Type local:CallResultViewModel}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="{Binding Path=Created, StringFormat={}{0:HH:mm:ss:ffff}}" Width="100"  />
+                    <TextBlock Grid.Column="1" Text="{Binding Path=Times, StringFormat='\{0:d\}x'}" Width="50"  />
+                    <TextBlock Grid.Column="2" Text="{Binding Path=Method}" Width="250" />
+                    <TextBlock Grid.Column="3" Text="{Binding Path=Result}" Width="250" />
+                    <TextBlock Grid.Column="4" Text="{Binding Path=Exception.Message}" ToolTip="{Binding Path=Exception.StackTrace}" Width="250" />
                 </Grid>
             </DataTemplate>
         </ResourceDictionary>
@@ -45,8 +71,9 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <StackPanel Orientation="Horizontal">
-            <Slider Width="250" Value="{Binding ElementName=CurrentControl, Path=ViewModel.Delay}" Minimum="5"  Maximum="150" TickPlacement="BottomRight" TickFrequency="5" IsSnapToTickEnabled="True" />
+            <Slider Width="250" Value="{Binding ElementName=CurrentControl, Path=ViewModel.Delay}" Minimum="5"  Maximum="1500" TickPlacement="BottomRight" TickFrequency="5" IsSnapToTickEnabled="True" />
             <TextBlock VerticalAlignment="Center" Text="{Binding ElementName=CurrentControl, Path=ViewModel.Delay, StringFormat='\{0\}s', Mode=OneWay, FallbackValue='\{0\}s'}" />
+            <CheckBox IsChecked="{Binding ElementName=CurrentControl, Path=ViewModel.KeepForever}" VerticalAlignment="Center" Content="keep" Margin="5 0 0 0" />
         </StackPanel>
         <TreeView Grid.Row="1" ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.Contexts}" >
             <!--<TreeView.ItemTemplate>

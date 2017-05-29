@@ -1,0 +1,19 @@
+﻿<Window x:Class="WpfApp1.FileSystemGanttWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WpfApp1"
+        mc:Ignorable="d"
+        Title="Window1" Height="522" Width="1820" Name="CurrentControl" >
+    <Window.Resources>
+        <ResourceDictionary>
+            <!--<DataTemplate DataType="{x:Type local:CallResultTimeSegment}" >
+                <Border Background="{Binding Path=BackGround}" ToolTip="{Binding Path=Title}" MinWidth="1" MinHeight="1" BorderThickness="1" BorderBrush="Gray" />
+            </DataTemplate>-->
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid>
+        <local:Gantt Rows="{Binding ElementName=CurrentControl, Path=ViewModel.GanttRows}" />
+    </Grid>
+</Window>

@@ -14,89 +14,25 @@ using SilentWave.IOExtensons;
 
 namespace DokanNetMirror
 {
-    public class Notifiable : INotifyPropertyChanged
-    {
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void NotifyPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
 
-    public class MirrorContext : Notifiable, IDisposable
+    public class MirrorContext
     {
-        public event Action<MirrorContext> Closed;
+        public event Action<MirrorContext, CallResult> CallResultAdded;
 
-        public String DisplayName => $"{FileName} | {IdentityName} | {ProcessId} | {Access} | {Share} | {Mode}";
-        public String FileName { get; private set; }
+        public Guid Id { get; private set; } = Guid.NewGuid();
         public Int32 ProcessId { get; private set; }
+        public String IdentityName { get; private set; }
+        public String FileName { get; private set; }
 
         public FileAccess Access { get; private set; }
         public FileShare Share { get; private set; }
         public FileMode Mode { get; private set; }
 
-        private Boolean _HaveErrors;
-        public Boolean HaveErrors
-        {
-            get => _HaveErrors;
-            private set
-            {
-                if (_HaveErrors == value) return;
-                _HaveErrors = value;
-                NotifyPropertyChanged(nameof(HaveErrors));
-            }
-        }
-
-        private Boolean _IsClosed;
-        public Boolean IsClosed
-        {
-            get => _IsClosed;
-            private set
-            {
-                if (_IsClosed == value) return;
-                _IsClosed = value;
-                NotifyPropertyChanged(nameof(IsClosed));
-                if (value) Closed?.Invoke(this);
-            }
-        }
-
         public FileStream FileStream { get; set; }
-        private readonly List<CallResult> _Calls = new List<CallResult>();
 
-        public String IdentityName { get; private set; }
-
-
-        public CallResult[] Calls => _Calls.ToArray();
         public void AddCall(CallResult call)
         {
-            if (disposedValue) return;
-            try
-            {
-                lock (_Calls)
-                {
-                    var lastCall = _Calls.LastOrDefault();
-
-                    if (lastCall != null && lastCall.Method == call.Method && lastCall.Result == call.Result && lastCall.Exception?.GetType() == call.Exception?.GetType())
-                    {
-                        lastCall.Times++;
-                    }
-                    else
-                    {
-                        _Calls.Add(call);
-                        NotifyPropertyChanged(nameof(Calls));
-                        if (call.Exception != null || (call.Result != NtStatus.Success)) HaveErrors = true;
-
-                        if (call.Method == nameof(Mirror.CloseFile))
-                        {
-                            IsClosed = true;
-                        };
-                    }
-                }
-            }
-            catch
-            {
-
-            }
+            CallResultAdded?.Invoke(this, call);
         }
 
         public MirrorContext(System.Security.Principal.WindowsIdentity identity, String fileName, Int32 processId, FileAccess access, FileShare share, FileMode mode)
@@ -109,66 +45,20 @@ namespace DokanNetMirror
             Access = access;
             Share = share;
         }
-
-        #region IDisposable Support
-        private bool disposedValue = false; // To detect redundant calls
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                lock (Calls)
-                {
-                    if (disposing)
-                    {
-
-                        // TODO: dispose managed state (managed objects).
-                        _Calls.Clear();
-                        Closed = null;
-                        FileStream = null;
-                    }
-
-                    // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-                    // TODO: set large fields to null.
-
-                    disposedValue = true;
-                }
-            }
-        }
-
-        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-        // ~MirrorContext() {
-        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        //   Dispose(false);
-        // }
-
-        // This code added to correctly implement the disposable pattern.
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-            // TODO: uncomment the following line if the finalizer is overridden above.
-            // GC.SuppressFinalize(this);
-        }
-        #endregion
     }
 
-    public class CallResult : Notifiable
+    public class CallResult
     {
-        public string Method { get; set; }
+        public DateTimeOffset Created { get; private set; }
+        public DateTimeOffset Ended { get; set; }
+        public string Method { get; private set; }
         public NtStatus? Result { get; set; }
         public Exception Exception { get; set; }
 
-        private UInt32 _Times = 1;
-        public UInt32 Times
+        public CallResult(String method)
         {
-            get => _Times;
-            set
-            {
-                if (Times == value) return;
-                _Times = value;
-                NotifyPropertyChanged(nameof(Times));
-            }
+            Method = method;
+            Created = DateTimeOffset.Now;
         }
     }
 
@@ -940,9 +830,9 @@ namespace DokanNetMirror
         delegate NtStatus DelegateResult<T>(out T out1);
         delegate NtStatus DelegateResult<T, S>(out T out1, out S out2);
 
-        private NtStatus TryAndLog<T, S>(MirrorContext mirrorcontext, DelegateResult<T, S> func, out T out1, out S out2, string method = null)
+        private NtStatus TryAndLog<T, S>(MirrorContext mirrorContext, DelegateResult<T, S> func, out T out1, out S out2, string method = null)
         {
-            var call = new CallResult() { Method = method };
+            var call = new CallResult(method);
             try
             {
                 var result = func(out out1, out out2);
@@ -956,31 +846,32 @@ namespace DokanNetMirror
             }
             finally
             {
-                mirrorcontext.AddCall(call);
+                mirrorContext.AddCall(call);
+                call.Ended = DateTimeOffset.Now;
             }
         }
 
-        private NtStatus TryAndLog<T>(MirrorContext mirrorcontext, DelegateResult<T> func, out T something, string method = null)
+        private NtStatus TryAndLog<T>(MirrorContext mirrorContext, DelegateResult<T> func, out T something, string method = null)
         {
-            return TryAndLog<T, int>(mirrorcontext, (out T innerOut1, out int innerDiscard) =>
+            return TryAndLog<T, int>(mirrorContext, (out T innerOut1, out int innerDiscard) =>
             {
                 innerDiscard = 0;
                 return func(out innerOut1);
             }, out something, out int discard, method);
         }
 
-        private NtStatus TryAndLog(MirrorContext mirrorcontext, Func<NtStatus> func, string method = null)
+        private NtStatus TryAndLog(MirrorContext mirrorContext, Func<NtStatus> func, string method = null)
         {
-            return TryAndLog<int>(mirrorcontext, (out int innerDiscard) =>
+            return TryAndLog<int>(mirrorContext, (out int innerDiscard) =>
             {
                 innerDiscard = 0;
                 return func();
             }, out int discard, method);
         }
 
-        private void TryAndLog(MirrorContext mirrorcontext, Action action, string method = null)
+        private void TryAndLog(MirrorContext mirrorContext, Action action, string method = null)
         {
-            TryAndLog(mirrorcontext, () =>
+            TryAndLog(mirrorContext, () =>
             {
                 action();
                 return 0; // discard it

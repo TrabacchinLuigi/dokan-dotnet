@@ -20,6 +20,8 @@ namespace WpfApp1
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
+
+
             var mirror = new Mirror("C:");
             System.Threading.Tasks.Task.Factory.StartNew(() =>
             {
@@ -35,6 +37,8 @@ namespace WpfApp1
             });
             MainWindow = new FileSystemWatcherWindow(mirror);
             MainWindow.Show();
+            var asd = new FileSystemGanttWindow(mirror);
+            asd.Show();
         }
     }
 }
