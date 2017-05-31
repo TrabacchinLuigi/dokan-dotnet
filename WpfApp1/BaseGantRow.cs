@@ -9,6 +9,7 @@ namespace WpfApp1
     {
         public String Title { get; set; }
         public ObservableCollection<TimeSegment> Segments { get; private set; }
+        public Object Context { get; set; }
 
         private DateTime? _MinDate;
         public DateTime? MinDate
@@ -111,22 +112,25 @@ namespace WpfApp1
             {
                 foreach (var segment in subRow.Segments)
                 {
-                    var existingIntersectingSegment = tempSegments.SingleOrDefault(x => x.Intersect(segment));
-                    if (existingIntersectingSegment == null)
+                    var existingIntersectingSegments = tempSegments.Where(x => x.Intersect(segment)).ToArray();
+                    if (!existingIntersectingSegments.Any())
                     {
                         tempSegments.Add(new TimeSegment(segment.Start, segment.End));
                     }
                     else
                     {
-                        tempSegments.Remove(existingIntersectingSegment);
-                        var mergedStart = existingIntersectingSegment.Start < segment.Start
-                            ? existingIntersectingSegment.Start
-                            : segment.Start;
-                        var mergedEnd = existingIntersectingSegment.End > segment.End
-                            ? existingIntersectingSegment.End
-                            : segment.End;
+                        foreach (var existingIntersectingSegment in existingIntersectingSegments)
+                        {
+                            tempSegments.Remove(existingIntersectingSegment);
+                            var mergedStart = existingIntersectingSegment.Start < segment.Start
+                                ? existingIntersectingSegment.Start
+                                : segment.Start;
+                            var mergedEnd = existingIntersectingSegment.End > segment.End
+                                ? existingIntersectingSegment.End
+                                : segment.End;
 
-                        tempSegments.Add(new TimeSegment(mergedStart, mergedEnd));
+                            tempSegments.Add(new TimeSegment(mergedStart, mergedEnd));
+                        }
                     }
                 }
             }

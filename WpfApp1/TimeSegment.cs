@@ -3,7 +3,34 @@ using System.Windows.Media;
 
 namespace WpfApp1
 {
-    public sealed class TimeSegment : Notifiable
+    public class TimedElement : Notifiable
+    {
+        private DateTime? _Start;
+        public DateTime? Start
+        {
+            get => _Start;
+            set
+            {
+                if (_Start == value) return;
+                _Start = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        private DateTime? _End;
+        public virtual DateTime? End
+        {
+            get => _End;
+            set
+            {
+                if (_End == value) return;
+                _End = value;
+                NotifyPropertyChanged();
+            }
+        }
+    }
+
+    public sealed class TimeSegment : TimedElement
     {
         private String _Title;
         public String Title
@@ -17,8 +44,19 @@ namespace WpfApp1
             }
         }
 
-        public DateTime Start { get; private set; }
-        public DateTime End { get; private set; }
+        public new DateTime Start
+        {
+            get => base.Start.Value;
+            private set => base.Start = value;
+        }
+
+        public new DateTime End
+        {
+            get => base.End.Value;
+            private set => base.End = value;
+        }
+
+        public TimeSpan Duration => End - Start;
 
         private Brush _BackGround;
         public Brush BackGround
@@ -43,8 +81,8 @@ namespace WpfApp1
                 || other.Start == End
                 || other.End == Start
                 || other.End == End
-                || other.Start > Start
-                || other.End > Start;
+                || other.Start > Start && other.Start < End
+                || other.End > Start && other.End < End;
 
         public override string ToString()
             => $"{Start}-{End}";

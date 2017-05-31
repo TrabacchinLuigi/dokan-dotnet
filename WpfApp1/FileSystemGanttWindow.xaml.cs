@@ -80,7 +80,7 @@ namespace WpfApp1
                         existingRow = new ExpandableGanttRow() { Title = context.FileName };
                         _GanttRows.Add(existingRow);
                     }
-                    var contextRow = new GanttRow() { Title = context.Id.ToString() };
+                    var contextRow = new GanttRow() { Title = context.Id.ToString(), Context = context };
                     existingRow.SubRows.Add(contextRow);
                 });
             }
@@ -89,8 +89,10 @@ namespace WpfApp1
             {
                 _Dispatcher.InvokeAsync(() =>
                 {
-                    var existingParentRow = _GanttRows.OfType<ExpandableGanttRow>().Single(x => String.Equals(x.Title, mc.FileName));
-                    var existingRow = existingParentRow.SubRows.SingleOrDefault(x => String.Equals(x.Title, mc.Id.ToString(), StringComparison.OrdinalIgnoreCase));
+                    var existingParentRow = _GanttRows.OfType<ExpandableGanttRow>().SingleOrDefault(x => String.Equals(x.Title, mc.FileName));
+                    if (existingParentRow == null) return;
+                    var existingRow = existingParentRow.SubRows.SingleOrDefault(x => x.Context == mc);
+                    if (existingRow == null) return;
                     existingRow.Segments.Add(new TimeSegment(cr.Created.DateTime, cr.Ended.DateTime) { Title = cr.Method, BackGround = GetColorForCallResult(cr) });
                 });
             }

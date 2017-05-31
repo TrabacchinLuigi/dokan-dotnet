@@ -46,6 +46,16 @@ namespace WpfApp1
             ViewModel = new GanttViewModel();
             InitializeComponent();
         }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            if (!ViewModel.MinDate.HasValue || !ViewModel.MaxDate.HasValue) return;
+
+            var elapsedTime = ViewModel.MaxDate.Value - ViewModel.MinDate.Value;
+            var onefourth = new TimeSpan(elapsedTime.Ticks / 4);
+            ViewModel.SelectionMinDate = ViewModel.MinDate + onefourth;
+            ViewModel.SelectionMaxDate = ViewModel.MaxDate - onefourth;
+        }
     }
 
     public class GanttViewModel : Notifiable
@@ -75,6 +85,8 @@ namespace WpfApp1
                 if (_MinDate == value) return;
                 _MinDate = value;
                 NotifyPropertyChanged();
+                if (_IsSelectedEverything) NotifyPropertyChanged(nameof(SelectionMinDate));
+                CalculateGrid();
             }
         }
 
@@ -86,6 +98,70 @@ namespace WpfApp1
             {
                 if (_MaxDate == value) return;
                 _MaxDate = value;
+                NotifyPropertyChanged();
+                if (_IsSelectedEverything) NotifyPropertyChanged(nameof(SelectionMaxDate));
+                CalculateGrid();
+            }
+        }
+
+        public ObservableCollection<GridElement> GridElements { get; private set; } = new ObservableCollection<GridElement>();
+
+        private void CalculateGrid()
+        {
+            if (!MaxDate.HasValue || !MinDate.HasValue) return;
+            GridElements.Clear();
+            var range = MaxDate.Value - MinDate.Value;
+            var onefifth = TimeSpan.FromTicks(range.Ticks / 5);
+            if (onefifth.TotalDays >= 1) onefifth = TimeSpan.FromDays(Math.Round(onefifth.TotalDays));
+            else if (onefifth.TotalHours >= 1) onefifth = TimeSpan.FromHours(Math.Round(onefifth.TotalHours));
+            else if (onefifth.TotalMinutes >= 1) onefifth = TimeSpan.FromMinutes(Math.Round(onefifth.TotalMinutes));
+            else if (onefifth.TotalSeconds >= 1) onefifth = TimeSpan.FromSeconds(Math.Round(onefifth.TotalSeconds));
+            else if (onefifth.TotalMilliseconds >= 1) onefifth = TimeSpan.FromMilliseconds(Math.Round(onefifth.TotalMilliseconds));
+
+            for (var i = 1L; i <= 5L; i++)
+            {
+                var end = MinDate.Value + TimeSpan.FromTicks(i * onefifth.Ticks);
+                GridElements.Add(new GridLine(end));
+                GridElements.Add(new GridLabel(end));
+            }
+        }
+
+        private Boolean _IsSelectedEverything = true;
+        public Boolean IsSelectedEverything
+        {
+            get => _IsSelectedEverything;
+            set
+            {
+                if (_IsSelectedEverything == value) return;
+                _IsSelectedEverything = value;
+                NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(SelectionMaxDate));
+                NotifyPropertyChanged(nameof(SelectionMinDate));
+            }
+        }
+
+        private DateTime? _SelectionMaxDate;
+        public DateTime? SelectionMaxDate
+        {
+            get => _IsSelectedEverything ? _MaxDate : _SelectionMaxDate;
+            set
+            {
+                if (_SelectionMaxDate == value) return;
+                _SelectionMaxDate = value;
+                _IsSelectedEverything = false;
+                NotifyPropertyChanged();
+            }
+        }
+
+        private DateTime? _SelectionMinDate;
+        public DateTime? SelectionMinDate
+        {
+            get => _IsSelectedEverything ? _MinDate : _SelectionMinDate;
+            set
+            {
+                if (_SelectionMinDate == value) return;
+                _SelectionMinDate = value;
+                _IsSelectedEverything = false;
                 NotifyPropertyChanged();
             }
         }
@@ -130,5 +206,29 @@ namespace WpfApp1
             if (e.PropertyName == nameof(BaseGanttRow.MinDate) || e.PropertyName == nameof(BaseGanttRow.MaxDate))
                 ReadMinMaxDates(sender as BaseGanttRow);
         }
+    }
+
+    public class GridElement : TimedElement
+    {
+        public new DateTime End
+        {
+            get => base.End.Value;
+            set => base.End = value;
+        }
+
+        public GridElement(DateTime end)
+        {
+            End = end;
+        }
+    }
+
+    public sealed class GridLine : GridElement
+    {
+        public GridLine(DateTime end) : base(end) { }
+    }
+
+    public sealed class GridLabel : GridElement
+    {
+        public GridLabel(DateTime end) : base(end) { }
     }
 }

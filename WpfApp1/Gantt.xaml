@@ -153,7 +153,34 @@
         </HierarchicalDataTemplate>
 
         <DataTemplate DataType="{x:Type local:TimeSegment}" >
-            <Border Background="{Binding BackGround}" ToolTip="{Binding Title}" MinWidth="1" MinHeight="1" BorderThickness="1" BorderBrush="Gray" />
+            <Border Background="{Binding BackGround}" MinWidth="1" MinHeight="1" BorderThickness="1" BorderBrush="Gray" >
+                <Border.ToolTip>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto" />
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto" />
+                            <RowDefinition Height="auto" />
+                            <RowDefinition Height="auto" />
+                            <RowDefinition Height="auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Title" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Start" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="End" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Duration" />
+
+                        <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Title}" />
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Start, StringFormat='\{0:HH:mm:ss.fffffff\}'}" />
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding End, StringFormat='\{0:HH:mm:ss.fffffff\}'}" />
+                        <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding Duration}" />
+                    </Grid>
+                </Border.ToolTip>
+            </Border>
         </DataTemplate>
 
 
@@ -163,22 +190,12 @@
             <RowDefinition Height="200" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
-        <Canvas />
 
-        <TreeView Grid.Row="1" Grid.ColumnSpan="2" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                      ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.Rows}"
-                      HorizontalContentAlignment="Stretch"
-                      ItemContainerStyle="{StaticResource TreeViewItemStyle1}" >
-        </TreeView>
-        <ScrollViewer Visibility="Collapsed" Grid.Column="1" Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.Rows}" >
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type local:BaseGanttRow}">
+        <ScrollViewer Name="TopGantt" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Hidden">
+            <ItemsControl ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.Rows}">
+                <ItemsControl.Resources>
+
+                    <DataTemplate DataType="{x:Type local:GanttRow}">
                         <ItemsControl Grid.Column="2" MinWidth="250" ItemsSource="{Binding Path=Segments}" ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplate1}" >
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
@@ -188,9 +205,54 @@
                             </ItemsControl.ItemContainerStyle>
                         </ItemsControl>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
+
+                    <DataTemplate DataType="{x:Type local:ExpandableGanttRow}">
+                        <ItemsControl ItemsSource="{Binding SubRows}" />
+                    </DataTemplate>
+
+                </ItemsControl.Resources>
             </ItemsControl>
         </ScrollViewer>
 
+        <ItemsControl x:Name="GridPanel" ItemsSource="{Binding ElementName=CurrentControl,Path=ViewModel.GridElements}" ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplate1}">
+            <ItemsControl.ItemContainerStyle>
+                <Style TargetType="ContentPresenter">
+                    <Setter Property="local:GanttRowPanel.EndDate" Value="{Binding Path=End}" />
+                </Style>
+            </ItemsControl.ItemContainerStyle>
+            <ItemsControl.Resources>
+                <DataTemplate DataType="{x:Type local:GridLine}">
+                    <Border Width="1" Background="Gray" VerticalAlignment="Stretch" BorderThickness="0" SnapsToDevicePixels="True" />
+                </DataTemplate>
+
+                <DataTemplate DataType="{x:Type local:GridLabel}">
+                    <Label Content="{Binding End, StringFormat='\{0:HH:mm:ss.fffffff\}'}" Padding="0 0 5 0" />
+                </DataTemplate>
+            </ItemsControl.Resources>
+        </ItemsControl>
+
+
+        <local:GanttRowPanel x:Name="SelectionPanel"
+                             MinDate="{Binding ElementName=CurrentControl, Path=ViewModel.MinDate}" 
+                             MaxDate="{Binding ElementName=CurrentControl, Path=ViewModel.MaxDate}" >
+            <Border Background="#99666666"
+                    BorderThickness="0 0 2 0"
+                    BorderBrush="#99333333"
+                    local:GanttRowPanel.StartDate="{Binding ElementName=CurrentControl, Path=ViewModel.MinDate}" 
+                    local:GanttRowPanel.EndDate="{Binding ElementName=CurrentControl, Path=ViewModel.SelectionMinDate}" />
+            <Border Background="#99666666"
+                    BorderThickness="2 0 0 0"
+                    BorderBrush="#99333333"
+                    local:GanttRowPanel.StartDate="{Binding ElementName=CurrentControl, Path=ViewModel.SelectionMaxDate}"
+                    local:GanttRowPanel.EndDate="{Binding ElementName=CurrentControl, Path=ViewModel.MaxDate}" />
+        </local:GanttRowPanel>
+
+        <TreeView Grid.Row="1" Grid.ColumnSpan="2" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                      ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.Rows}"
+                      HorizontalContentAlignment="Stretch"
+                      ItemContainerStyle="{StaticResource TreeViewItemStyle1}" >
+        </TreeView>
+        <Button Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Right" Padding="5" Content="fa cose" Click="Button_Click"/>
     </Grid>
 </UserControl>
