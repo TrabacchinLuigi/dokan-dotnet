@@ -56,6 +56,61 @@ namespace WpfApp1
             ViewModel.SelectionMinDate = ViewModel.MinDate + onefourth;
             ViewModel.SelectionMaxDate = ViewModel.MaxDate - onefourth;
         }
+
+        private void SelectionPanel_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!ViewModel.MinDate.HasValue || !ViewModel.MaxDate.HasValue) return;
+            var range = ViewModel.MaxDate.Value - ViewModel.MinDate.Value;
+            var panel = sender as FrameworkElement;
+            var pixelPerTicks = range.Ticks / panel.ActualWidth;
+            var mousex = e.GetPosition(panel).X;
+            var ticks = mousex * pixelPerTicks;
+            var timespan = TimeSpan.FromTicks((long)ticks);
+
+            ViewModel.MouseDate = ViewModel.MinDate + timespan;
+            SetNewSelection();
+        }
+
+        private void SetNewSelection()
+        {
+            if (ViewModel.SelectionStartDate.HasValue)
+            {
+                if (ViewModel.MouseDate > ViewModel.SelectionStartDate)
+                {
+                    ViewModel.SelectionMinDate = ViewModel.SelectionStartDate;
+                    ViewModel.SelectionMaxDate = ViewModel.MouseDate;
+                }
+                else
+                {
+                    ViewModel.SelectionMinDate = ViewModel.MouseDate;
+                    ViewModel.SelectionMaxDate = ViewModel.SelectionStartDate;
+                }
+            }
+        }
+
+        private void SelectionPanel_MouseEnter(object sender, MouseEventArgs e)
+        {
+            ViewModel.SelectionPreviewVisibility = Visibility.Visible;
+        }
+
+        private void SelectionPanel_MouseLeave(object sender, MouseEventArgs e)
+        {
+            ViewModel.SelectionPreviewVisibility = Visibility.Collapsed;
+        }
+
+        private void SmallGantt_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            ViewModel.SelectionMinDate = null;
+            ViewModel.SelectionMaxDate = null;
+            ViewModel.SelectionStartDate = ViewModel.MouseDate;
+        }
+
+        private void SmallGantt_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            SetNewSelection();
+            ViewModel.SelectionStartDate = null;
+
+        }
     }
 
     public class GanttViewModel : Notifiable
@@ -166,6 +221,33 @@ namespace WpfApp1
                 NotifyPropertyChanged();
             }
         }
+
+        private Visibility _SelectionPreviewVisibility;
+        public Visibility SelectionPreviewVisibility
+        {
+            get => _SelectionPreviewVisibility;
+            set
+            {
+                if (_SelectionPreviewVisibility == value) return;
+                _SelectionPreviewVisibility = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        private DateTime? _MouseDate;
+        public DateTime? MouseDate
+        {
+            get => _MouseDate;
+            set
+            {
+                if (_MouseDate == value) return;
+                _MouseDate = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public bool IsSelecting { get; internal set; }
+        public DateTime? SelectionStartDate { get; internal set; }
 
         private void Rows_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {

@@ -192,8 +192,14 @@
         </Grid.RowDefinitions>
 
         <ScrollViewer Name="TopScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Hidden" Margin="0 20 0 0">
-            <ItemsControl Name="SmallGantt" BorderThickness="1" BorderBrush="Red" 
-                          ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.Rows}">
+            <ItemsControl   Name="SmallGantt" BorderThickness="1" BorderBrush="Red" 
+                            MouseEnter="SelectionPanel_MouseEnter"
+                            MouseLeave="SelectionPanel_MouseLeave"
+                            MouseMove="SelectionPanel_MouseMove"
+                            MouseDown="SmallGantt_MouseDown"
+                            MouseUp="SmallGantt_MouseUp"
+                            Background="White"
+                            ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.Rows}">
                 <ItemsControl.Resources>
 
                     <DataTemplate DataType="{x:Type local:GanttRow}">
@@ -216,7 +222,6 @@
         </ScrollViewer>
 
         <ItemsControl x:Name="GridPanel" IsHitTestVisible="False" HorizontalAlignment="Left" BorderThickness="1" BorderBrush="Green"
-                      PreviewMouseMove=""
                       Width="{Binding ElementName=SmallGantt, Path=ActualWidth, Mode=OneWay}"
                       ItemsSource="{Binding ElementName=CurrentControl,Path=ViewModel.GridElements}" 
                       ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplate1}">
@@ -256,6 +261,12 @@
                     BorderBrush="#99333333"
                     local:GanttRowPanel.StartDate="{Binding ElementName=CurrentControl, Path=ViewModel.SelectionMaxDate}"
                     local:GanttRowPanel.EndDate="{Binding ElementName=CurrentControl, Path=ViewModel.MaxDate}" />
+            <Border Background="#603333FF"
+                    BorderThickness="0"
+                    Width="2"
+                    VerticalAlignment="Stretch"
+                    local:GanttRowPanel.EndDate="{Binding ElementName=CurrentControl, Path=ViewModel.MouseDate}"
+                    Visibility="{Binding ElementName=CurrentControl, Path=ViewModel.SelectionPreviewVisibility}" />
         </local:GanttRowPanel>
 
         <TreeView Grid.Row="1" Grid.ColumnSpan="2" ScrollViewer.VerticalScrollBarVisibility="Auto"
