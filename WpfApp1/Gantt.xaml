@@ -153,7 +153,7 @@
         </HierarchicalDataTemplate>
 
         <DataTemplate DataType="{x:Type local:TimeSegment}" >
-            <Border Background="{Binding BackGround}" MinWidth="1" MinHeight="1" BorderThickness="1" BorderBrush="Gray" >
+            <Border Background="{Binding BackGround}" MinWidth="1" MinHeight="1" BorderThickness="1" BorderBrush="Gray" SnapsToDevicePixels="True" >
                 <Border.ToolTip>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -191,8 +191,9 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ScrollViewer Name="TopGantt" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Hidden">
-            <ItemsControl ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.Rows}">
+        <ScrollViewer Name="TopScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Hidden" Margin="0 20 0 0">
+            <ItemsControl Name="SmallGantt" BorderThickness="1" BorderBrush="Red" 
+                          ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.Rows}">
                 <ItemsControl.Resources>
 
                     <DataTemplate DataType="{x:Type local:GanttRow}">
@@ -214,7 +215,11 @@
             </ItemsControl>
         </ScrollViewer>
 
-        <ItemsControl x:Name="GridPanel" ItemsSource="{Binding ElementName=CurrentControl,Path=ViewModel.GridElements}" ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplate1}">
+        <ItemsControl x:Name="GridPanel" IsHitTestVisible="False" HorizontalAlignment="Left" BorderThickness="1" BorderBrush="Green"
+                      PreviewMouseMove=""
+                      Width="{Binding ElementName=SmallGantt, Path=ActualWidth, Mode=OneWay}"
+                      ItemsSource="{Binding ElementName=CurrentControl,Path=ViewModel.GridElements}" 
+                      ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplate1}">
             <ItemsControl.ItemContainerStyle>
                 <Style TargetType="ContentPresenter">
                     <Setter Property="local:GanttRowPanel.EndDate" Value="{Binding Path=End}" />
@@ -226,13 +231,19 @@
                 </DataTemplate>
 
                 <DataTemplate DataType="{x:Type local:GridLabel}">
-                    <Label Content="{Binding End, StringFormat='\{0:HH:mm:ss.fffffff\}'}" Padding="0 0 5 0" />
+                    <TextBlock FontSize="10" Padding="0 0 5 0" >
+                        <Run Text="{Binding Elapsed.TotalMilliseconds, Mode=OneWay}" />
+                        <Run Text="ms"/>
+                    </TextBlock>
                 </DataTemplate>
             </ItemsControl.Resources>
         </ItemsControl>
 
 
         <local:GanttRowPanel x:Name="SelectionPanel"
+                             IsHitTestVisible="False"
+                             HorizontalAlignment="Left"
+                             Width="{Binding ElementName=SmallGantt, Path=ActualWidth, Mode=OneWay}"
                              MinDate="{Binding ElementName=CurrentControl, Path=ViewModel.MinDate}" 
                              MaxDate="{Binding ElementName=CurrentControl, Path=ViewModel.MaxDate}" >
             <Border Background="#99666666"

@@ -121,8 +121,9 @@ namespace WpfApp1
             for (var i = 1L; i <= 5L; i++)
             {
                 var end = MinDate.Value + TimeSpan.FromTicks(i * onefifth.Ticks);
+                if (end >= MaxDate) return;
                 GridElements.Add(new GridLine(end));
-                GridElements.Add(new GridLabel(end));
+                GridElements.Add(new GridLabel(end, end - MinDate.Value));
             }
         }
 
@@ -229,6 +230,10 @@ namespace WpfApp1
 
     public sealed class GridLabel : GridElement
     {
-        public GridLabel(DateTime end) : base(end) { }
+        public TimeSpan Elapsed { get; private set; }
+        public GridLabel(DateTime end, TimeSpan elapsed) : base(end)
+        {
+            Elapsed = elapsed;
+        }
     }
 }
