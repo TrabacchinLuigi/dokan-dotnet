@@ -108,49 +108,17 @@
             </Setter>
         </Style>
 
-        <ItemsPanelTemplate x:Key="ItemsPanelTemplate1">
+        <ItemsPanelTemplate x:Key="ItemsPanelTemplateFullZoom">
             <local:GanttRowPanel MinHeight="5"
                 MinDate="{Binding ViewModel.MinDate, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:Gantt}}}"
                 MaxDate="{Binding ViewModel.MaxDate, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:Gantt}}}" />
         </ItemsPanelTemplate>
 
-        <DataTemplate DataType="{x:Type local:GanttRow}">
-            <Grid d:DesignWidth="350" d:DesignHeight="30" Grid.IsSharedSizeScope="False">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="250" SharedSizeGroup="TableVerticalHeaders" />
-                    <ColumnDefinition Width="*" SharedSizeGroup="Timeline" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Path=Title, FallbackValue='\{ Title \}'}" />
-                <ItemsControl Grid.Column="2" MinWidth="250" ItemsSource="{Binding Path=Segments}" ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplate1}" >
-                    <ItemsControl.ItemContainerStyle>
-                        <Style TargetType="ContentPresenter">
-                            <Setter Property="local:GanttRowPanel.StartDate" Value="{Binding Path=Start}" />
-                            <Setter Property="local:GanttRowPanel.EndDate" Value="{Binding Path=End}" />
-                        </Style>
-                    </ItemsControl.ItemContainerStyle>
-                </ItemsControl>
-            </Grid>
-        </DataTemplate>
-
-        <HierarchicalDataTemplate DataType="{x:Type local:ExpandableGanttRow}" ItemsSource="{Binding Path=SubRows}">
-            <Grid d:DesignWidth="350" d:DesignHeight="30" Grid.IsSharedSizeScope="False">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="250" SharedSizeGroup="TableVerticalHeaders" />
-                    <ColumnDefinition Width="*" SharedSizeGroup="Timeline" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding Path=Title, FallbackValue='\{ Title \}'}" />
-                <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                    <ItemsControl MinWidth="250" ItemsSource="{Binding Path=Segments}" ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplate1}" >
-                        <ItemsControl.ItemContainerStyle>
-                            <Style TargetType="ContentPresenter">
-                                <Setter Property="local:GanttRowPanel.StartDate" Value="{Binding Path=Start}" />
-                                <Setter Property="local:GanttRowPanel.EndDate" Value="{Binding Path=End}" />
-                            </Style>
-                        </ItemsControl.ItemContainerStyle>
-                    </ItemsControl>
-                </ScrollViewer>
-            </Grid>
-        </HierarchicalDataTemplate>
+        <ItemsPanelTemplate x:Key="ItemsPanelTemplateSelectionZoom">
+            <local:GanttRowPanel MinHeight="5"
+                MinDate="{Binding ViewModel.SelectionMinDate, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:Gantt}}}"
+                MaxDate="{Binding ViewModel.SelectionMaxDate, Mode=OneWay, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:Gantt}}}" />
+        </ItemsPanelTemplate>
 
         <DataTemplate DataType="{x:Type local:TimeSegment}" >
             <Border Background="{Binding BackGround}" MinWidth="1" MinHeight="1" BorderThickness="1" BorderBrush="Gray" SnapsToDevicePixels="True" >
@@ -203,7 +171,7 @@
                 <ItemsControl.Resources>
 
                     <DataTemplate DataType="{x:Type local:GanttRow}">
-                        <ItemsControl Grid.Column="2" MinWidth="250" ItemsSource="{Binding Path=Segments}" ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplate1}" >
+                        <ItemsControl Grid.Column="2" MinWidth="250" ItemsSource="{Binding Path=Segments}" ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplateFullZoom}" >
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
                                     <Setter Property="local:GanttRowPanel.StartDate" Value="{Binding Path=Start}" />
@@ -224,7 +192,7 @@
         <ItemsControl x:Name="GridPanel" IsHitTestVisible="False" HorizontalAlignment="Left" BorderThickness="1" BorderBrush="Green"
                       Width="{Binding ElementName=SmallGantt, Path=ActualWidth, Mode=OneWay}"
                       ItemsSource="{Binding ElementName=CurrentControl,Path=ViewModel.GridElements}" 
-                      ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplate1}">
+                      ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplateFullZoom}">
             <ItemsControl.ItemContainerStyle>
                 <Style TargetType="ContentPresenter">
                     <Setter Property="local:GanttRowPanel.EndDate" Value="{Binding Path=End}" />
@@ -271,10 +239,47 @@
 
         <TreeView Grid.Row="1" Grid.ColumnSpan="2" ScrollViewer.VerticalScrollBarVisibility="Auto"
                       ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                      ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.Rows}"
+                      ItemsSource="{Binding ElementName=CurrentControl, Path=ViewModel.FilteredRows}"
                       HorizontalContentAlignment="Stretch"
                       ItemContainerStyle="{StaticResource TreeViewItemStyle1}" >
+            <TreeView.Resources>
+                <DataTemplate DataType="{x:Type local:GanttRow}">
+                    <Grid d:DesignWidth="350" d:DesignHeight="30">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="231" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Path=Title, FallbackValue='\{ Title \}'}" />
+                        <ItemsControl Grid.Column="2" ItemsSource="{Binding Path=Segments}" ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplateSelectionZoom}" >
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="local:GanttRowPanel.StartDate" Value="{Binding Path=Start}" />
+                                    <Setter Property="local:GanttRowPanel.EndDate" Value="{Binding Path=End}" />
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                        </ItemsControl>
+                    </Grid>
+                </DataTemplate>
+
+                <HierarchicalDataTemplate DataType="{x:Type local:ExpandableGanttRow}" ItemsSource="{Binding Path=SubRows}">
+                    <Grid d:DesignWidth="350" d:DesignHeight="30">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="250"  />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Path=Title, FallbackValue='\{ Title \}'}" />
+                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Path=Segments}" ItemsPanel="{StaticResource ResourceKey=ItemsPanelTemplateSelectionZoom}" >
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="local:GanttRowPanel.StartDate" Value="{Binding Path=Start}" />
+                                    <Setter Property="local:GanttRowPanel.EndDate" Value="{Binding Path=End}" />
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                        </ItemsControl>
+                    </Grid>
+                </HierarchicalDataTemplate>
+            </TreeView.Resources>
         </TreeView>
-        <Button Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Right" Padding="5" Content="fa cose" Click="Button_Click"/>
+        <Button Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Right" Padding="5" Click="Button_Click" Content="asd" />
     </Grid>
 </UserControl>

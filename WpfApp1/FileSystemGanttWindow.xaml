@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WpfApp1"
         mc:Ignorable="d"
-        Title="Window1" Height="522" Width="1820" Name="CurrentControl" >
+        Title="Window1" Height="522" Width="1820" Name="CurrentControl" WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <ResourceDictionary>
             <!--<DataTemplate DataType="{x:Type local:CallResultTimeSegment}" >

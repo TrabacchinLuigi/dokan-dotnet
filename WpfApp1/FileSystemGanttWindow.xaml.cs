@@ -77,7 +77,7 @@ namespace WpfApp1
                     var existingRow = GanttRows.OfType<ExpandableGanttRow>().SingleOrDefault(x => String.Equals(x.Title, context.FileName, StringComparison.OrdinalIgnoreCase));
                     if (existingRow == null)
                     {
-                        existingRow = new ExpandableGanttRow() { Title = context.FileName };
+                        existingRow = new ExpandableGanttRow() { Title = context.FileName, Context = context.FileName };
                         _GanttRows.Add(existingRow);
                     }
                     var contextRow = new GanttRow() { Title = context.Id.ToString(), Context = context };

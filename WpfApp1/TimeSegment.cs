@@ -82,7 +82,8 @@ namespace WpfApp1
                 || other.End == Start
                 || other.End == End
                 || other.Start > Start && other.Start < End
-                || other.End > Start && other.End < End;
+                || other.End > Start && other.End < End
+                || other.Start < Start && other.End > End;
 
         public override string ToString()
             => $"{Start}-{End}";

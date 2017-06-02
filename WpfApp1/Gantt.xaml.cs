@@ -44,17 +44,8 @@ namespace WpfApp1
         public Gantt()
         {
             ViewModel = new GanttViewModel();
+            ViewModel.FilterWithSelection();
             InitializeComponent();
-        }
-
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-            if (!ViewModel.MinDate.HasValue || !ViewModel.MaxDate.HasValue) return;
-
-            var elapsedTime = ViewModel.MaxDate.Value - ViewModel.MinDate.Value;
-            var onefourth = new TimeSpan(elapsedTime.Ticks / 4);
-            ViewModel.SelectionMinDate = ViewModel.MinDate + onefourth;
-            ViewModel.SelectionMaxDate = ViewModel.MaxDate - onefourth;
         }
 
         private void SelectionPanel_MouseMove(object sender, MouseEventArgs e)
@@ -102,7 +93,8 @@ namespace WpfApp1
         {
             ViewModel.SelectionMinDate = null;
             ViewModel.SelectionMaxDate = null;
-            ViewModel.SelectionStartDate = ViewModel.MouseDate;
+            if (e.LeftButton == MouseButtonState.Pressed)
+                ViewModel.SelectionStartDate = ViewModel.MouseDate;
         }
 
         private void SmallGantt_MouseUp(object sender, MouseButtonEventArgs e)
@@ -110,6 +102,11 @@ namespace WpfApp1
             SetNewSelection();
             ViewModel.SelectionStartDate = null;
 
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            ViewModel.FilterWithSelection();
         }
     }
 
@@ -140,7 +137,7 @@ namespace WpfApp1
                 if (_MinDate == value) return;
                 _MinDate = value;
                 NotifyPropertyChanged();
-                if (_IsSelectedEverything) NotifyPropertyChanged(nameof(SelectionMinDate));
+                if (!_SelectionMinDate.HasValue) NotifyPropertyChanged(nameof(SelectionMinDate));
                 CalculateGrid();
             }
         }
@@ -154,7 +151,7 @@ namespace WpfApp1
                 if (_MaxDate == value) return;
                 _MaxDate = value;
                 NotifyPropertyChanged();
-                if (_IsSelectedEverything) NotifyPropertyChanged(nameof(SelectionMaxDate));
+                if (!_SelectionMaxDate.HasValue) NotifyPropertyChanged(nameof(SelectionMaxDate));
                 CalculateGrid();
             }
         }
@@ -182,43 +179,76 @@ namespace WpfApp1
             }
         }
 
-        private Boolean _IsSelectedEverything = true;
-        public Boolean IsSelectedEverything
+        public DateTime? SelectionStartDate { get; internal set; }
+
+        private DateTime? _SelectionMinDate;
+        public DateTime? SelectionMinDate
         {
-            get => _IsSelectedEverything;
+            get => _SelectionMinDate.HasValue ? _SelectionMinDate : _MinDate;
             set
             {
-                if (_IsSelectedEverything == value) return;
-                _IsSelectedEverything = value;
+                if (_SelectionMinDate == value) return;
+                _SelectionMinDate = value;
                 NotifyPropertyChanged();
-                NotifyPropertyChanged(nameof(SelectionMaxDate));
-                NotifyPropertyChanged(nameof(SelectionMinDate));
+                FilterWithSelection();
             }
         }
 
         private DateTime? _SelectionMaxDate;
         public DateTime? SelectionMaxDate
         {
-            get => _IsSelectedEverything ? _MaxDate : _SelectionMaxDate;
+            get => _SelectionMaxDate.HasValue ? _SelectionMaxDate : _MaxDate;
             set
             {
                 if (_SelectionMaxDate == value) return;
                 _SelectionMaxDate = value;
-                _IsSelectedEverything = false;
+                NotifyPropertyChanged();
+                FilterWithSelection();
+            }
+        }
+
+        private ReadOnlyObservableCollection<BaseGanttRow> _FilteredRows;
+        public ReadOnlyObservableCollection<BaseGanttRow> FilteredRows
+        {
+            get => _FilteredRows; set
+            {
+                if (_FilteredRows == value) return;
+                _FilteredRows = value;
                 NotifyPropertyChanged();
             }
         }
 
-        private DateTime? _SelectionMinDate;
-        public DateTime? SelectionMinDate
+        public void FilterWithSelection()
         {
-            get => _IsSelectedEverything ? _MinDate : _SelectionMinDate;
-            set
+            if (!SelectionMinDate.HasValue || !SelectionMaxDate.HasValue)
             {
-                if (_SelectionMinDate == value) return;
-                _SelectionMinDate = value;
-                _IsSelectedEverything = false;
-                NotifyPropertyChanged();
+                FilteredRows = _Rows;
+            }
+            else
+            {
+                var newFilteredRows = new ObservableCollection<BaseGanttRow>();
+                FilteredRows = new ReadOnlyObservableCollection<BaseGanttRow>(newFilteredRows);
+
+                var selectionRange = new TimeSegment(SelectionMinDate.Value, SelectionMaxDate.Value);
+
+                foreach (var exRow in _Rows.OfType<ExpandableGanttRow>().ToArray())
+                {
+                    var newExRow = new ExpandableGanttRow() { Title = exRow.Title, Context = exRow.Context, IsExpanded = exRow.IsExpanded };
+                    
+                    foreach (var row in exRow.SubRows)
+                    {
+                        var intersectingSegments = row.Segments.Where(s => s.Intersect(selectionRange)).ToArray();
+                        if (intersectingSegments.Any())
+                        {
+                            var newRow = new GanttRow() { Title = row.Title, Context = row.Context };
+                            newExRow.SubRows.Add(newRow);
+                            foreach (var intersectingSeg in intersectingSegments)
+                                newRow.Segments.Add(intersectingSeg);
+                        }
+                    }
+                    if(newExRow.SubRows.Any())
+                       newFilteredRows.Add(newExRow);
+                }
             }
         }
 
@@ -245,9 +275,6 @@ namespace WpfApp1
                 NotifyPropertyChanged();
             }
         }
-
-        public bool IsSelecting { get; internal set; }
-        public DateTime? SelectionStartDate { get; internal set; }
 
         private void Rows_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
