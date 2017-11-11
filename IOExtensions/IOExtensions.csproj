@@ -1,12 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net4.6;net4.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net45;net40</TargetFrameworks>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     <Authors>Luigi Trabacchin</Authors>
     <Company>SilentWave</Company>
     <Description>Native methods who aren't exposed by the framework</Description>
     <Copyright>SilentWave</Copyright>
+    <ApplicationIcon />
+    <OutputType>Library</OutputType>
+    <StartupObject />
   </PropertyGroup>
 
 </Project>

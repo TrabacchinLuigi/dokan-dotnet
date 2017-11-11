@@ -155,6 +155,7 @@
     </UserControl.Resources>
     <Grid >
         <Grid.RowDefinitions>
+            
             <RowDefinition Height="200" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>

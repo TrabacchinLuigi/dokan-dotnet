@@ -76,6 +76,8 @@
     </Compile>
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Notifiable.cs" />
+    <Compile Include="SafeNativeMethods.cs" />
+    <Compile Include="ShellNotifier.cs" />
     <Compile Include="TimeSegment.cs" />
     <Compile Include="FileSystemGanttWindow.xaml.cs">
       <DependentUpon>FileSystemGanttWindow.xaml</DependentUpon>
