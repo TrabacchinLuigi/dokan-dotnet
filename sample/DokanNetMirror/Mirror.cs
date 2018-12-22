@@ -187,47 +187,62 @@ namespace DokanNetMirror
                         break;
                 }
 
-                try
+                // THIS IS NOT HOW WE IMPLEMENTED THE STUFF FOR REAL
+                // but the logic is the same
+                // when we don't have the conted available locally
+                // we start a semaphore
+                using (var mre = new System.Threading.ManualResetEvent(false))
                 {
-                    info.Context = new FileStream(filePath, mode,
-                        readAccess ? System.IO.FileAccess.Read : System.IO.FileAccess.ReadWrite, share, 4096, options);
+                    // here we bind to an event that unlock the semaphore once the content get's available
+                    // ContentController.onContentAvailable += () => mre.set();
 
-                    if (pathExists && (mode == FileMode.OpenOrCreate
-                                       || mode == FileMode.Create))
-                        result = DokanResult.AlreadyExists;
+                    // but if the content does not become available in the predefined time 
+                    mre.WaitOne(TimeSpan.FromSeconds(1));
+                    // we just return device not ready
+                    return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
+                                   DokanResult.NotReady);
+                }
+                //try
+                //{
+                //    info.Context = new FileStream(filePath, mode,
+                //        readAccess ? System.IO.FileAccess.Read : System.IO.FileAccess.ReadWrite, share, 4096, options);
 
-                    if (mode == FileMode.CreateNew || mode == FileMode.Create) //Files are always created as Archive
-                        attributes |= FileAttributes.Archive;
-                    File.SetAttributes(filePath, attributes);
-                }
-                catch (UnauthorizedAccessException) // don't have access rights
-                {
-                    if (info.Context is FileStream fileStream)
-                    {
-                        // returning AccessDenied cleanup and close won't be called
-                        fileStream.Dispose();
-                        info.Context = null;
-                    }
-                    return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
-                        DokanResult.AccessDenied);
-                }
-                catch (DirectoryNotFoundException)
-                {
-                    return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
-                        DokanResult.PathNotFound);
-                }
-                catch (Exception ex)
-                {
-                    var hr = (uint)Marshal.GetHRForException(ex);
-                    switch (hr)
-                    {
-                        case 0x80070020: //Sharing violation
-                            return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
-                                DokanResult.SharingViolation);
-                        default:
-                            throw;
-                    }
-                }
+                //    if (pathExists && (mode == FileMode.OpenOrCreate
+                //                       || mode == FileMode.Create))
+                //        result = DokanResult.AlreadyExists;
+
+                //    if (mode == FileMode.CreateNew || mode == FileMode.Create) //Files are always created as Archive
+                //        attributes |= FileAttributes.Archive;
+                //    File.SetAttributes(filePath, attributes);
+                //}
+                //catch (UnauthorizedAccessException) // don't have access rights
+                //{
+                //    if (info.Context is FileStream fileStream)
+                //    {
+                //        // returning AccessDenied cleanup and close won't be called
+                //        fileStream.Dispose();
+                //        info.Context = null;
+                //    }
+                //    return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
+                //        DokanResult.AccessDenied);
+                //}
+                //catch (DirectoryNotFoundException)
+                //{
+                //    return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
+                //        DokanResult.PathNotFound);
+                //}
+                //catch (Exception ex)
+                //{
+                //    var hr = (uint)Marshal.GetHRForException(ex);
+                //    switch (hr)
+                //    {
+                //        case 0x80070020: //Sharing violation
+                //            return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
+                //                DokanResult.SharingViolation);
+                //        default:
+                //            throw;
+                //    }
+                //}
             }
             return Trace(nameof(CreateFile), fileName, info, access, share, mode, options, attributes,
                 result);
