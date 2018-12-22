@@ -34,12 +34,12 @@ namespace DokanNetMirror
             this.path = path;
         }
 
-        private string GetPath(string fileName)
+        protected string GetPath(string fileName)
         {
             return path + fileName;
         }
 
-        private NtStatus Trace(string method, string fileName, DokanFileInfo info, NtStatus result,
+        protected NtStatus Trace(string method, string fileName, DokanFileInfo info, NtStatus result,
             params object[] parameters)
         {
 #if TRACE
@@ -71,7 +71,7 @@ namespace DokanNetMirror
         public NtStatus CreateFile(string fileName, FileAccess access, FileShare share, FileMode mode,
             FileOptions options, FileAttributes attributes, DokanFileInfo info)
         {
-            var result = NtStatus.Success;
+            var result = DokanResult.Success;
             var filePath = GetPath(fileName);
 
             if (info.IsDirectory)
@@ -87,7 +87,7 @@ namespace DokanNetMirror
                                 {
                                     if (!File.GetAttributes(filePath).HasFlag(FileAttributes.Directory))
                                         return Trace(nameof(CreateFile), fileName, info, access, share, mode, options,
-                                            attributes, NtStatus.NotADirectory);
+                                            attributes, DokanResult.NotADirectory);
                                 }
                                 catch (Exception)
                                 {
@@ -395,7 +395,7 @@ namespace DokanNetMirror
                     var lat = lastAccessTime?.ToFileTime() ?? 0;
                     var lwt = lastWriteTime?.ToFileTime() ?? 0;
                     if (NativeMethods.SetFileTime(stream.SafeFileHandle, ref ct, ref lat, ref lwt))
-                        return NtStatus.Success;
+                        return DokanResult.Success;
                     throw Marshal.GetExceptionForHR(Marshal.GetLastWin32Error());
                 }
 
@@ -543,7 +543,7 @@ namespace DokanNetMirror
             }
 #else
 // .NET Core 1.0 do not have support for FileStream.Lock
-            return NtStatus.NotImplemented;
+            return DokanResult.NotImplemented;
 #endif
         }
 
@@ -563,7 +563,7 @@ namespace DokanNetMirror
             }
 #else
 // .NET Core 1.0 do not have support for FileStream.Unlock
-            return NtStatus.NotImplemented;
+            return DokanResult.NotImplemented;
 #endif
         }
 
@@ -612,7 +612,7 @@ namespace DokanNetMirror
 #else
 // .NET Core 1.0 do not have support for Directory.GetAccessControl
             security = null;
-            return NtStatus.NotImplemented;
+            return DokanResult.NotImplemented;
 #endif
         }
 
@@ -638,7 +638,7 @@ namespace DokanNetMirror
             }
 #else
 // .NET Core 1.0 do not have support for Directory.SetAccessControl
-            return NtStatus.NotImplemented;
+            return DokanResult.NotImplemented;
 #endif
         }
 

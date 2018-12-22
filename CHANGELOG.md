@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.2.1] - 2018-12-20
+### Changed
+- Improve Buffer Handling to Reduce GC Pressure.
+
+## [1.1.2.0] - 2018-08-10
+### Added
+- Included a strongly typed error code in DokanException to better communicate the reason why mounting failed.
+- NotADirectory enum value to DokanResult.
+
+### Changed
+- Status error message is now dispatched by DokanException itself instead of Dokan class.
+- Replaced usages of NtStatus with DokanResult in DokanNetMirror. 
+
+### Fixed
+- Leak of the token handle in GetRequestor()
+- DokanFileInfo.Context leaks GCHandle if not set null
+- DokanMain throw wrongly when success
+
 ## [1.1.1.1] - 2018-04-25
 ### Added
 - Enum value ``FileAccess.None``.
@@ -115,7 +133,9 @@ See the [release note](http://web.archive.org/web/20150416102451/http://dokan-de
 - ``DokanOptions.Version``, ``DokanOptions.RemovableDrive`` and ``DokanOptions.MountPoint``
 - ``DokanRemoveMountPoint``
 
-[Unreleased]: https://github.com/dokan-dev/dokan-dotnet/compare/v1.1.1.0...HEAD
+[Unreleased]: https://github.com/dokan-dev/dokan-dotnet/compare/v1.1.2.0...HEAD
+[1.1.2.0]:    https://github.com/dokan-dev/dokan-dotnet/compare/v1.1.1.1...v1.1.2.0
+[1.1.1.1]:    https://github.com/dokan-dev/dokan-dotnet/compare/v1.1.1.0...v1.1.1.1
 [1.1.1.0]:    https://github.com/dokan-dev/dokan-dotnet/compare/v1.1.0.3...v1.1.1.0
 [1.1.0.3]:    https://github.com/dokan-dev/dokan-dotnet/compare/v1.1.0.1...v1.1.0.3
 [1.1.0.1]:    https://github.com/dokan-dev/dokan-dotnet/compare/v1.1.0.0...v1.1.0.1
